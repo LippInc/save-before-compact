@@ -1,0 +1,38 @@
+{
+  "_comment": "Merge the 'hooks' object into ~/.claude/settings.json (user scope). Windows / PowerShell 5.1 form, tested. The scripts live in ~/.claude/hooks/. Verify with: claude --debug hooks",
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:USERPROFILE\\.claude\\hooks\\precompact-checkpoint.ps1\"",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:USERPROFILE\\.claude\\hooks\\sessionstart-reinject.ps1\"",
+            "shell": "powershell"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "& \"$env:USERPROFILE\\.claude\\hooks\\postcompact-recovery.ps1\"",
+            "shell": "powershell"
+          }
+        ]
+      }
+    ]
+  }
+}
