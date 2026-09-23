@@ -1,6 +1,6 @@
 ---
 name: save-before-compact
-description: 'Sweep the current conversation for anything important that is not yet saved to a file, save it, write a short RESUME.md handoff for the next session, and only then report, right before the conversation is compacted or cleared. Use when the user says they are about to compact or clear this chat, that context is nearly full, "save anything important before I compact", "get this chat ready to compact", or invokes /save-before-compact. Do not use for an ordinary request to summarize the conversation; that needs no files written.'
+description: 'Sweep the current conversation for anything important that is not yet saved to a file, save it, write a short RESUME.md handoff for the next session, and only then report, right before the conversation is compacted or cleared. Use when the user says they are about to compact or clear this chat, that context is nearly full, "save anything important before I compact", "get this chat ready to compact", when a hook or the user asks for a checkpoint of the session, or invokes /save-before-compact. Do not use for an ordinary request to summarize the conversation; that needs no files written.'
 argument-hint: '[optional: a topic to focus the sweep on; blank = whole chat]'
 license: MIT
 ---
@@ -9,7 +9,9 @@ license: MIT
 
 Compaction keeps a summary of this conversation and drops detail. The things most likely to vanish are the ones decided or learned **after the main deliverable was written up**: the "oh, and afterwards we decided Y / found out Z" riders that live only in this chat and read as throwaway. This skill is a fast sweep for those. It is a bounded pass, not a research task.
 
-You cannot trigger the compaction yourself; you are getting the chat ready for the user to do it. If the user only asked for a summary of the conversation, give them one and write nothing.
+You cannot compact, and you should not clear at a warm boundary either: continuing a session whose prompt cache is still warm costs very little and keeps the nuance, so you are getting the chat ready for whatever the user does next. Clearing is the pickup-time decision. A long session picked up after its prompt cache has expired re-processes its whole context on the first message, and starting fresh (`/clear`, or a new session if the user wants the old chat to stay visible) with a current RESUME.md is the cheap path then. If your environment gives you a tool that clears the session, use it only when the user explicitly asks you to wrap up. If the user only asked for a summary of the conversation, give them one and write nothing.
+
+**Checkpoint mode.** When a hook or the user asks for a checkpoint mid-session (the session has grown since its last save, and RESUME.md should be made current while the cache is still warm), run the sweep below exactly as usual, with the scope always "since the last save point" (the previous RESUME.md write), never the whole chat, then stop.
 
 **Order is load-bearing: files first, chat text last.** In an audit of my own transcripts, 5 of 6 compactions that fired while this skill was running cut it off before its closing chat text (the receipt and the resume block) was emitted; the file writes had already landed every time (n=6, one machine; EVIDENCE.md in the repo this skill came from). Files on disk are outside the context window. Chat text is not. So everything durable goes to disk before you say anything.
 
@@ -25,7 +27,7 @@ Then scan.
 
 ## Step 1 - sweep for load-bearing things that are not saved yet
 
-Scan the chat (from the start, or from the last save point if there was one; if the user named a focus area, narrow to it: $ARGUMENTS) for:
+Scan the chat (from the start, or from the last save point if there was one; a checkpoint run always starts from the last save point; if the user named a focus area, narrow to it: $ARGUMENTS) for:
 
 - **Decisions and reversals**: "actually, go with X", a changed scope, a pick between options, a kill/keep call, a chosen next step. Post-deliverable ones are the most likely to be lost.
 - **Verified facts that change the plan**: a confirmed price, deadline, constraint, or a "checked it, it's actually Z" a future session would otherwise re-derive or get wrong.
